@@ -1,59 +1,87 @@
-"""Memory tools for LangGraph agents.
-
-This module provides tools for managing user long-term memory using
-Databricks Lakebase. Copy this file to your agent_server/ directory.
-
-Usage:
-    from agent_server.memory_tools import memory_tools, get_user_id
-
-    # In your streaming function:
-    user_id = get_user_id(request)
-    tools = await mcp_client.get_tools() + memory_tools()
-    config = {"configurable": {"user_id": user_id, "store": store}}
-"""
-
 import json
 import logging
 import os
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from typing import Optional
 
 from databricks.sdk import WorkspaceClient
+from databricks_langchain import AsyncCheckpointSaver, AsyncDatabricksStore
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langgraph.store.base import BaseStore
 from mlflow.types.responses import ResponsesAgentRequest
 
+from agent_server.utils import _is_databricks_app_env
 
-# -----------------------------------------------------------------------------
-# Helper Functions
-# -----------------------------------------------------------------------------
+logger = logging.getLogger(__name__)
 
 
-def get_user_id(request: ResponsesAgentRequest) -> Optional[str]:
-    """Extract user_id from request context or custom inputs.
+@dataclass(frozen=True)
+class LakebaseConfig:
+    instance_name: Optional[str]
+    autoscaling_endpoint: Optional[str]
+    autoscaling_project: Optional[str]
+    autoscaling_branch: Optional[str]
+    embedding_endpoint: str = "databricks-gte-large-en"  # override via DATABRICKS_EMBEDDING_ENDPOINT
+    embedding_dims: int = 1024
 
-    Checks custom_inputs first (for API calls), then request.context
-    (for Databricks Apps with OBO authentication).
+    @property
+    def description(self) -> str:
+        return self.autoscaling_endpoint or self.instance_name or f"{self.autoscaling_project}/{self.autoscaling_branch}"
 
-    Returns None if no user_id found - let the caller decide the fallback.
-    """
-    custom_inputs = dict(request.custom_inputs or {})
-    if "user_id" in custom_inputs:
-        return custom_inputs["user_id"]
-    if request.context and getattr(request.context, "user_id", None):
-        return request.context.user_id
-    return None
+
+def init_lakebase_config() -> LakebaseConfig:
+    endpoint = os.getenv("LAKEBASE_AUTOSCALING_ENDPOINT") or None
+    raw_name = os.getenv("LAKEBASE_INSTANCE_NAME") or None
+    project = os.getenv("LAKEBASE_AUTOSCALING_PROJECT") or None
+    branch = os.getenv("LAKEBASE_AUTOSCALING_BRANCH") or None
+
+    has_autoscaling = project and branch
+    if not endpoint and not raw_name and not has_autoscaling:
+        raise ValueError(
+            "Lakebase configuration is required but not set. "
+            "Please set one of the following in your environment:\n"
+            "  Option 1 (autoscaling endpoint): LAKEBASE_AUTOSCALING_ENDPOINT=<your-endpoint-name>\n"
+            "  Option 2 (autoscaling): LAKEBASE_AUTOSCALING_PROJECT=<project> and LAKEBASE_AUTOSCALING_BRANCH=<branch>\n"
+            "  Option 3 (provisioned): LAKEBASE_INSTANCE_NAME=<your-instance-name>\n"
+        )
+
+    # Priority: endpoint > project+branch > instance_name (mutually exclusive in the library)
+    if endpoint:
+        instance_name = None
+        project = None
+        branch = None
+    elif has_autoscaling:
+        instance_name = None
+        endpoint = None
+    else:
+        instance_name = resolve_lakebase_instance_name(raw_name)
+        endpoint = None
+        project = None
+        branch = None
+
+    embedding_endpoint = os.getenv("DATABRICKS_EMBEDDING_ENDPOINT", "databricks-gte-large-en")
+    return LakebaseConfig(
+        instance_name=instance_name,
+        autoscaling_endpoint=endpoint,
+        autoscaling_project=project,
+        autoscaling_branch=branch,
+        embedding_endpoint=embedding_endpoint,
+    )
 
 
 def _is_lakebase_hostname(value: str) -> bool:
     """Check if the value looks like a Lakebase hostname rather than an instance name."""
+    # Hostname pattern: instance-{uuid}.database.{env}.cloud.databricks.com
     return ".database." in value and value.endswith(".com")
 
 
 def resolve_lakebase_instance_name(
     instance_name: str, workspace_client: Optional[WorkspaceClient] = None
 ) -> str:
-    """Resolve a Lakebase instance name from a hostname if needed.
+    """
+    Resolve a Lakebase instance name from a hostname if needed.
 
     If the input is a hostname (e.g., from Databricks Apps value_from resolution),
     this will resolve it to the actual instance name by listing database instances.
@@ -69,8 +97,10 @@ def resolve_lakebase_instance_name(
         ValueError: If the hostname cannot be resolved to an instance name
     """
     if not _is_lakebase_hostname(instance_name):
+        # Input is already an instance name
         return instance_name
 
+    # Input is a hostname - resolve to instance name
     client = workspace_client or WorkspaceClient()
     hostname = instance_name
 
@@ -82,6 +112,7 @@ def resolve_lakebase_instance_name(
             "Ensure you have access to database instances."
         ) from exc
 
+    # Find the instance that matches this hostname
     for instance in instances:
         rw_dns = getattr(instance, "read_write_dns", None)
         ro_dns = getattr(instance, "read_only_dns", None)
@@ -102,9 +133,21 @@ def resolve_lakebase_instance_name(
     )
 
 
-def _is_databricks_app_env() -> bool:
-    """Check if running in a Databricks App environment."""
-    return bool(os.getenv("DATABRICKS_APP_NAME"))
+async def run_lakebase_setup(config: LakebaseConfig) -> None:
+    """Run database migrations for checkpoint and store tables. Call once at app startup."""
+    async with lakebase_context(config) as (checkpointer, store):
+        await checkpointer.setup()
+        await store.setup()
+    logger.info("Lakebase setup complete")
+
+
+def get_user_id(request: ResponsesAgentRequest) -> Optional[str]:
+    custom_inputs = dict(request.custom_inputs or {})
+    if "user_id" in custom_inputs:
+        return custom_inputs["user_id"]
+    if request.context and getattr(request.context, "user_id", None):
+        return request.context.user_id
+    return None
 
 
 def get_lakebase_access_error_message(lakebase_instance_name: str) -> str:
@@ -118,7 +161,8 @@ def get_lakebase_access_error_message(lakebase_instance_name: str) -> str:
             "1. Go to the Databricks UI and navigate to your app\n"
             "2. Click 'Edit' → 'App resources' → 'Add resource'\n"
             "3. Add your Lakebase instance as a resource\n"
-            "4. Grant the necessary permissions on your Lakebase instance."
+            "4. Grant the necessary permissions on your Lakebase instance. "
+            "See the README section 'Grant Lakebase permissions to your App's Service Principal' for the SQL commands."
         )
     else:
         return (
@@ -130,33 +174,29 @@ def get_lakebase_access_error_message(lakebase_instance_name: str) -> str:
         )
 
 
-# -----------------------------------------------------------------------------
-# Memory Tools Factory
-# -----------------------------------------------------------------------------
+@asynccontextmanager
+async def lakebase_context(config: LakebaseConfig):
+    """Yield (checkpointer, store) for short-term and long-term memory."""
+    async with AsyncCheckpointSaver(
+        instance_name=config.instance_name,
+        autoscaling_endpoint=config.autoscaling_endpoint,
+        project=config.autoscaling_project,
+        branch=config.autoscaling_branch,
+    ) as checkpointer, AsyncDatabricksStore(
+        instance_name=config.instance_name,
+        autoscaling_endpoint=config.autoscaling_endpoint,
+        project=config.autoscaling_project,
+        branch=config.autoscaling_branch,
+        embedding_endpoint=config.embedding_endpoint,
+        embedding_dims=config.embedding_dims,
+    ) as store:
+        yield checkpointer, store
 
 
 def memory_tools():
-    """Factory function returning memory tools for the agent.
-
-    Returns a list of tools that can be added to your agent:
-    - get_user_memory: Search for relevant information from long-term memory
-    - save_user_memory: Save information to long-term memory
-    - delete_user_memory: Delete a specific memory
-
-    Usage:
-        tools = await mcp_client.get_tools() + memory_tools()
-        config = {"configurable": {"user_id": user_id, "store": store}}
-    """
-
     @tool
     async def get_user_memory(query: str, config: RunnableConfig) -> str:
-        """Search for relevant information about the user from long-term memory.
-
-        Use this to recall preferences, past interactions, or other saved information.
-
-        Args:
-            query: What to search for in the user's memories
-        """
+        """Search for relevant information about the user from long-term memory."""
         user_id = config.get("configurable", {}).get("user_id")
         if not user_id:
             return "Memory not available - no user_id provided."
@@ -176,15 +216,7 @@ def memory_tools():
 
     @tool
     async def save_user_memory(memory_key: str, memory_data_json: str, config: RunnableConfig) -> str:
-        """Save information about the user to long-term memory.
-
-        Use this to remember user preferences, important details, or other
-        information that should persist across conversations.
-
-        Args:
-            memory_key: A short descriptive key (e.g., "preferred_name", "team", "interests")
-            memory_data_json: JSON object to save (e.g., '{"value": "engineering"}')
-        """
+        """Save information about the user to long-term memory."""
         user_id = config.get("configurable", {}).get("user_id")
         if not user_id:
             return "Cannot save memory - no user_id provided."
@@ -206,13 +238,7 @@ def memory_tools():
 
     @tool
     async def delete_user_memory(memory_key: str, config: RunnableConfig) -> str:
-        """Delete a specific memory from the user's long-term memory.
-
-        Use this when the user asks to forget something or correct stored information.
-
-        Args:
-            memory_key: The key of the memory to delete (e.g., "preferred_name", "team")
-        """
+        """Delete a specific memory from the user's long-term memory."""
         user_id = config.get("configurable", {}).get("user_id")
         if not user_id:
             return "Cannot delete memory - no user_id provided."

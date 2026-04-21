@@ -198,8 +198,6 @@ sketch
 
 # End of https://www.toptal.com/developers/gitignore/api/react
 
-e2e-chatbot-app-next/
-
 **/uv.lock
 **/mlruns/
 **/.vite/
@@ -207,20 +205,15 @@ e2e-chatbot-app-next/
 **/.env
 **/.env.local
 
-# OMC
+# Claude Code
+.claude/skills/
+
+**/.env
+**/.env.local
+load-test-runs/
+
+# oh-my-claudecode state
 .omc/
 
-# Claude Code - track skills and settings
-.claude/*
-!.claude/settings.json
-!.claude/skills/
-.claude/skills/*
-!.claude/skills/quickstart/
-!.claude/skills/discover-tools/
-!.claude/skills/deploy/
-!.claude/skills/add-tools/
-!.claude/skills/run-locally/
-!.claude/skills/modify-agent/
-!.claude/skills/lakebase-setup/
-!.claude/skills/agent-memory/
-!.claude/skills/migrate-from-model-serving/
+# local chatbot app (not part of template)
+e2e-chatbot-app-next/
