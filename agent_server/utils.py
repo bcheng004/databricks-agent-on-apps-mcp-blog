@@ -45,8 +45,8 @@ def init_mcp_client(workspace_client: WorkspaceClient) -> DatabricksMultiServerM
     return DatabricksMultiServerMCPClient(
         [
             DatabricksMCPServer(
-                name="system-ai",
-                url=f"{host_name}/api/2.0/mcp/functions/system/ai",
+                name="asana",
+                url=f"{host_name}/api/2.0/mcp/external/asana_bohao",
                 workspace_client=workspace_client,
             ),
         ]
