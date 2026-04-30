@@ -137,6 +137,43 @@ class DatabricksMCPServer(MCPServer):
         return data
 
 
+# Fields that langchain_mcp_adapters adds to content blocks (e.g., auto-generated
+# `id` and `index` from `create_text_block`) but that Anthropic's tool_result
+# content schema rejects. Strip them before the blocks reach the model.
+_ANTHROPIC_REJECTED_BLOCK_FIELDS = ("id", "index")
+
+
+def _sanitize_content_blocks(content: Any) -> Any:
+    if not isinstance(content, list):
+        return content
+    cleaned: list[Any] = []
+    for block in content:
+        if isinstance(block, dict):
+            cleaned.append(
+                {k: v for k, v in block.items() if k not in _ANTHROPIC_REJECTED_BLOCK_FIELDS}
+            )
+        else:
+            cleaned.append(block)
+    return cleaned
+
+
+def _wrap_tool_coroutine(tool: Any) -> Any:
+    original = tool.coroutine
+    if original is None:
+        return tool
+
+    async def wrapped(**kwargs):
+        result = await original(**kwargs)
+        # response_format="content_and_artifact" -> (content, artifact)
+        if isinstance(result, tuple) and len(result) == 2:
+            content, artifact = result
+            return _sanitize_content_blocks(content), artifact
+        return _sanitize_content_blocks(result)
+
+    tool.coroutine = wrapped
+    return tool
+
+
 class DatabricksMultiServerMCPClient(MultiServerMCPClient):
     """
     MultiServerMCPClient with simplified configuration for Databricks servers.
@@ -174,6 +211,8 @@ class DatabricksMultiServerMCPClient(MultiServerMCPClient):
                 if server_config.handle_tool_error is not None:
                     for tool in tools:
                         tool.handle_tool_error = server_config.handle_tool_error
+            for tool in tools:
+                _wrap_tool_coroutine(tool)
             all_tools.extend(tools)
 
         return all_tools
