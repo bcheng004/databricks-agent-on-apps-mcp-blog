@@ -7,8 +7,12 @@ from uuid import uuid4
 
 import uuid_utils
 from databricks.sdk import WorkspaceClient
-from databricks_langchain import DatabricksMCPServer, DatabricksMultiServerMCPClient
 from langchain_core.messages import AIMessageChunk, ToolMessage
+
+from agent_server.multi_server_mcp_client import (
+    DatabricksMCPServer,
+    DatabricksMultiServerMCPClient,
+)
 from mlflow.genai.agent_server import get_request_headers
 from mlflow.types.responses import (
     ResponsesAgentRequest,
@@ -54,7 +58,8 @@ def init_mcp_client(workspace_client: WorkspaceClient) -> DatabricksMultiServerM
 
 
 def get_user_workspace_client() -> WorkspaceClient:
-    token = get_request_headers().get("x-forwarded-access-token")
+    # token = get_request_headers().get("x-forwarded-access-token")
+    token = ""
     return WorkspaceClient(token=token, auth_type="pat")
 
 
