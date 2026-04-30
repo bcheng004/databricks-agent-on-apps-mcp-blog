@@ -58,8 +58,9 @@ def init_mcp_client(workspace_client: WorkspaceClient) -> DatabricksMultiServerM
 
 
 def get_user_workspace_client() -> WorkspaceClient:
-    # token = get_request_headers().get("x-forwarded-access-token")
-    token = ""
+    token = get_request_headers().get("x-forwarded-access-token")
+    logging.info("OBO token present: %s", bool(token))
+    # token = ""
     return WorkspaceClient(token=token, auth_type="pat")
 
 
