@@ -7,8 +7,12 @@ from uuid import uuid4
 
 import uuid_utils
 from databricks.sdk import WorkspaceClient
-from databricks_langchain import DatabricksMCPServer, DatabricksMultiServerMCPClient
 from langchain_core.messages import AIMessageChunk, ToolMessage
+
+from agent_server.multi_server_mcp_client import (
+    DatabricksMCPServer,
+    DatabricksMultiServerMCPClient,
+)
 from mlflow.genai.agent_server import get_request_headers
 from mlflow.types.responses import (
     ResponsesAgentRequest,
@@ -45,8 +49,8 @@ def init_mcp_client(workspace_client: WorkspaceClient) -> DatabricksMultiServerM
     return DatabricksMultiServerMCPClient(
         [
             DatabricksMCPServer(
-                name="system-ai",
-                url=f"{host_name}/api/2.0/mcp/functions/system/ai",
+                name="asana",
+                url=f"{host_name}/api/2.0/mcp/external/asana_bohao",
                 workspace_client=workspace_client,
             ),
         ]
@@ -55,6 +59,8 @@ def init_mcp_client(workspace_client: WorkspaceClient) -> DatabricksMultiServerM
 
 def get_user_workspace_client() -> WorkspaceClient:
     token = get_request_headers().get("x-forwarded-access-token")
+    logging.info("OBO token present: %s", bool(token))
+    # token = ""
     return WorkspaceClient(token=token, auth_type="pat")
 
 

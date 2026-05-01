@@ -1,12 +1,15 @@
 bundle:
-  name: agent_langgraph_advanced
+  name: agent_langgraph_advanced_mcp
+  engine: direct
 
 resources:
   apps:
-    agent_langgraph_advanced:
-      name: "bo-test-advanced-workshop"
+    agent_langgraph_advanced_mcp:
+      name: "test-app"
       description: "LangGraph agent application with short-term and long-term memory"
       source_code_path: ./
+      user_api_scopes:
+        - mcp.external
       config:
         command: ["uv", "run", "start-app"]
         env:
@@ -35,10 +38,14 @@ resources:
             permission: 'CAN_MANAGE'
         - name: 'postgres'
           postgres:
-            branch: "projects/bo-test-lakebase-advanced/branches/bo-test-lakebase-advanced-branch"
-            database: "projects/bo-test-lakebase-advanced/branches/bo-test-lakebase-advanced-branch/databases/db-tj43-gaypl21b57"
+            branch: "projects/bo-test-mcp-lakebase/branches/bo-test-mcp-lakebase-branch"
+            database: "projects/bo-test-mcp-lakebase/branches/bo-test-mcp-lakebase-branch/databases/db-9p32-sjnhrtul06"
             permission: 'CAN_CONNECT_AND_CREATE'
-
+        - name: asana_bohao
+          uc_securable:
+            securable_full_name: asana_bohao
+            securable_type: CONNECTION
+            permission: USE_CONNECTION
 targets:
   dev:
     mode: development
