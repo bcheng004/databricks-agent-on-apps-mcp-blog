@@ -216,4 +216,4 @@ load-test-runs/
 .omc/
 
 # local chatbot app (not part of template)
-e2e-chatbot-app-next/
+# e2e-chatbot-app-next/
