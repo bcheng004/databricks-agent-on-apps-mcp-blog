@@ -19,6 +19,7 @@ dependencies = [
     "langchain-mcp-adapters>=0.2.1",
     "python-dotenv>=1.2.1",
     "opentelemetry-exporter-otlp-proto-grpc>=1.25.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.25.0",
 ]
 
 [build-system]
@@ -53,3 +54,4 @@ discover-tools = "scripts.discover_tools:main"
 preflight = "scripts.preflight:main"
 grant-lakebase-permissions = "scripts.grant_lakebase_permissions:main"
 setup-asana-mcp = "scripts.setup_asana_mcp_connection:main"
+create-genie-space = "scripts.create_genie_space:main"
