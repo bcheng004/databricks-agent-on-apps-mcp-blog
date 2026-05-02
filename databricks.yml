@@ -46,6 +46,11 @@ resources:
             securable_full_name: asana_bohao
             securable_type: CONNECTION
             permission: USE_CONNECTION
+        - name: system_table_genie
+          genie_space:
+            name: system table genie
+            space_id: 01f145d082b818539d5d2e0de519acbd
+            permission: CAN_RUN
 targets:
   dev:
     mode: development
