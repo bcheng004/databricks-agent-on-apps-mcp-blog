@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 mlflow.langchain.autolog()
 logging.getLogger("mlflow.utils.autologging_utils").setLevel(logging.ERROR)
 
-LLM_ENDPOINT_NAME = "databricks-claude-opus-4-7"
+LLM_ENDPOINT_NAME = "databricks-claude-sonnet-4-6"
 LAKEBASE_CONFIG = init_lakebase_config()
 
 

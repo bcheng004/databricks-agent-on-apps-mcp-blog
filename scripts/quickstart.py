@@ -1091,11 +1091,20 @@ def setup_lakebase(
     return selection
 
 
-def _replace_lakebase_env_vars(content: str, lakebase_config: dict) -> str:
+def _replace_lakebase_env_vars(
+    content: str,
+    lakebase_config: dict,
+    value_from_key: str = "value_from",
+) -> str:
     """Remove all Lakebase env var lines and insert only the relevant ones.
 
     Handles both active and commented-out LAKEBASE_ env vars, plus their
     associated comment lines (e.g. "# Autoscaling Lakebase config").
+
+    ``value_from_key`` controls the casing of the emitted reference field —
+    use ``value_from`` for ``databricks.yml`` (DAB schema) and ``valueFrom``
+    for ``app.yaml`` (Databricks Apps schema). The dedup pass below matches
+    both casings so legacy lines get stripped no matter which file we're in.
     """
     lines = content.splitlines()
     result = []
@@ -1105,7 +1114,7 @@ def _replace_lakebase_env_vars(content: str, lakebase_config: dict) -> str:
     for line in lines:
         if skip_next_value:
             skip_next_value = False
-            if re.match(r"\s*(?:#\s*)?(?:value|valueFrom)\s*:", line):
+            if re.match(r"\s*(?:#\s*)?(?:value|value_from|valueFrom)\s*:", line):
                 continue
             # Not a value line — fall through to normal processing
 
@@ -1127,6 +1136,11 @@ def _replace_lakebase_env_vars(content: str, lakebase_config: dict) -> str:
             if insert_idx is None:
                 insert_idx = len(result)
             skip_next_value = True
+            continue
+
+        # Strip stray duplicate value_from/valueFrom lines that are no longer
+        # paired with a `- name: LAKEBASE_*` (left over from prior buggy runs).
+        if re.match(r"\s*(?:#\s*)?(?:value_from|valueFrom)\s*:\s*\"postgres\"", line):
             continue
 
         result.append(line)
@@ -1151,7 +1165,7 @@ def _replace_lakebase_env_vars(content: str, lakebase_config: dict) -> str:
     else:
         new_lines = [
             f"{indent}- name: LAKEBASE_AUTOSCALING_ENDPOINT",
-            f'{indent}  valueFrom: "postgres"',
+            f'{indent}  {value_from_key}: "postgres"',
         ]
 
     final = result[:insert_idx] + new_lines + result[insert_idx:]
@@ -1418,7 +1432,11 @@ def update_app_yaml_lakebase(lakebase_config: dict) -> None:
         return
 
     content = app_yaml_path.read_text()
-    updated = _replace_lakebase_env_vars(content, lakebase_config)
+    # app.yaml uses Databricks Apps' camelCase `valueFrom`, while databricks.yml
+    # uses DAB's snake_case `value_from` — same function, different casing.
+    updated = _replace_lakebase_env_vars(
+        content, lakebase_config, value_from_key="valueFrom"
+    )
     if updated != content:
         app_yaml_path.write_text(updated)
         print_success("Updated app.yaml with Lakebase config")
