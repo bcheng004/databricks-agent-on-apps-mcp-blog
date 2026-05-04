@@ -50,12 +50,12 @@ def init_mcp_client(workspace_client: WorkspaceClient) -> DatabricksMultiServerM
         [
             DatabricksMCPServer(
                 name="genie",
-                url=f"{host_name}/api/2.0/mcp/genie/01f147b80bd21b929d76e4bbd180d94b",
+                url=f"{host_name}/api/2.0/mcp/genie/01f147c9b6da1dbd826b7018cdd593fe",
                 workspace_client=workspace_client,
             ),
             DatabricksMCPServer(
                 name="asana",
-                url=f"{host_name}/api/2.0/mcp/external/agent_asana_mcp",
+                url=f"{host_name}/api/2.0/mcp/external/mcp_agent_asana",
                 workspace_client=workspace_client,
             ),
         ]

@@ -69,6 +69,12 @@ uv run discover-tools
 
 ```bash
 databricks bundle deploy --profile <profile>
+
+# Grant the app's SP the Lakebase grants it needs for memory tables
+uv run grant-lakebase-permissions --profile <profile> --app-name <app> --memory-type langgraph
+
 databricks bundle run agent_langgraph_advanced_mcp --profile <profile>
 ```
+
+> `grant-lakebase-permissions` has to run *after* the bundle deploy because the app's service principal client ID only exists once the app is created.
 

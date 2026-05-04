@@ -5,7 +5,7 @@ bundle:
 resources:
   apps:
     agent_langgraph_advanced_mcp:
-      name: "test-mcp-agent"
+      name: "mcp-agent-app"
       description: "LangGraph agent application with short-term and long-term memory"
       source_code_path: ./
       user_api_scopes:
@@ -39,18 +39,18 @@ resources:
             permission: 'CAN_MANAGE'
         - name: 'postgres'
           postgres:
-            branch: "projects/test-mcp-lakebase/branches/test-mcp-lakebase-branch"
-            database: "projects/test-mcp-lakebase/branches/test-mcp-lakebase-branch/databases/db-13d7-nxtwkwqhry"
+            branch: "projects/mcp-agent-lakebase/branches/mcp-agent-lakebase-branch"
+            database: "projects/mcp-agent-lakebase/branches/mcp-agent-lakebase-branch/databases/db-9xkf-oeq2p67m5r"
             permission: 'CAN_CONNECT_AND_CREATE'
-        - name: agent_asana_mcp
+        - name: mcp_agent_asana
           uc_securable:
-            securable_full_name: agent_asana_mcp
+            securable_full_name: mcp_agent_asana
             securable_type: CONNECTION
             permission: USE_CONNECTION
-        - name: billable_usage_genie
+        - name: billable_usage_space
           genie_space:
-            name: billable usage genie
-            space_id: 01f147b80bd21b929d76e4bbd180d94b
+            name: billable usage space
+            space_id: 01f147c9b6da1dbd826b7018cdd593fe
             permission: CAN_RUN
 targets:
   dev:
