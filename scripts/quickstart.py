@@ -1105,7 +1105,7 @@ def _replace_lakebase_env_vars(content: str, lakebase_config: dict) -> str:
     for line in lines:
         if skip_next_value:
             skip_next_value = False
-            if re.match(r"\s*(?:#\s*)?(?:value|value_from)\s*:", line):
+            if re.match(r"\s*(?:#\s*)?(?:value|valueFrom)\s*:", line):
                 continue
             # Not a value line — fall through to normal processing
 
@@ -1151,7 +1151,7 @@ def _replace_lakebase_env_vars(content: str, lakebase_config: dict) -> str:
     else:
         new_lines = [
             f"{indent}- name: LAKEBASE_AUTOSCALING_ENDPOINT",
-            f'{indent}  value_from: "postgres"',
+            f'{indent}  valueFrom: "postgres"',
         ]
 
     final = result[:insert_idx] + new_lines + result[insert_idx:]

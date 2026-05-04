@@ -48,6 +48,16 @@ def init_mcp_client(workspace_client: WorkspaceClient) -> DatabricksMultiServerM
     host_name = get_databricks_host_from_env()
     return DatabricksMultiServerMCPClient(
         [
+            # TODO: still need to automate parts of the Genie MCP setup —
+            # the space_id below is pasted in by hand after running
+            # `uv run create-genie-space`. Wire create_genie_space.py to
+            # rewrite this URL the same way setup_asana_mcp_connection
+            # rewrites the asana entry.
+            DatabricksMCPServer(
+                name="genie",
+                url=f"{host_name}/api/2.0/mcp/genie/01f1477a412a137186499615f2406010",
+                workspace_client=workspace_client,
+            ),
             DatabricksMCPServer(
                 name="asana",
                 url=f"{host_name}/api/2.0/mcp/external/agent_asana_mcp",
@@ -75,7 +85,8 @@ def get_user_workspace_client() -> WorkspaceClient:
 
 def get_databricks_host_from_env() -> Optional[str]:
     try:
-        w = WorkspaceClient()
+        # w = WorkspaceClient()
+        w = get_user_workspace_client()
         return w.config.host
     except Exception as e:
         logging.exception("Error getting databricks host from env: %s", e)
