@@ -51,7 +51,15 @@ RESOURCE_NAME_MAX_LEN = 30
 
 
 def add_genie_space_to_app(space_id: str, title: str) -> None:
-    """Replace any genie_space resource on the first app in databricks.yml."""
+    """Replace all genie_space resources in ``databricks.yml`` with this one.
+
+    Strips every existing entry that has a ``genie_space`` key and appends
+    a single fresh entry — so reruns don't accumulate stale spaces from
+    prior runs. Mirrors the ``uc_securable`` handling in
+    ``setup_asana_mcp_connection._add_uc_connection_to_bundle``.
+    """
+    from ruamel.yaml.comments import CommentedMap
+
     yaml = YAML()
     yaml.preserve_quotes = True
     yaml.indent(mapping=2, sequence=4, offset=2)
@@ -70,29 +78,46 @@ def add_genie_space_to_app(space_id: str, title: str) -> None:
     app = apps[app_key]
     resources = app.setdefault("resources", [])
 
-    removed = [r for r in resources if "genie_space" in r]
-    for r in removed:
-        resources.remove(r)
-
     base = re.sub(r"[^a-z0-9_]+", "_", title.lower()).strip("_") or "genie_space"
     resource_name = base[:RESOURCE_NAME_MAX_LEN].rstrip("_") or "genie_space"
-    resources.append(
-        {
-            "name": resource_name,
-            "genie_space": {
-                "name": title,
-                "space_id": space_id,
-                "permission": "CAN_RUN",
-            },
-        }
-    )
 
+    new_entry = CommentedMap()
+    new_entry["name"] = resource_name
+    genie = CommentedMap()
+    genie["name"] = title
+    genie["space_id"] = space_id
+    genie["permission"] = "CAN_RUN"
+    new_entry["genie_space"] = genie
+
+    removed = [
+        r.get("name", "<unnamed>")
+        for r in resources
+        if isinstance(r, dict) and "genie_space" in r
+    ]
+    indices_to_drop = [
+        i
+        for i, r in enumerate(resources)
+        if isinstance(r, dict) and "genie_space" in r
+    ]
+    for i in reversed(indices_to_drop):
+        del resources[i]
+
+    resources.append(new_entry)
     with DATABRICKS_YML.open("w") as f:
         yaml.dump(cfg, f)
-    action = "Replaced" if removed else "Added"
-    print(
-        f"{action} genie_space resource {resource_name!r} ({space_id}) in {DATABRICKS_YML}"
-    )
+
+    if removed:
+        print(
+            f"  -> replaced {len(removed)} existing genie_space entr"
+            f"{'y' if len(removed) == 1 else 'ies'} "
+            f"({', '.join(removed)}) with {resource_name!r} ({space_id}) in "
+            f"{DATABRICKS_YML} (under app '{app_key}')"
+        )
+    else:
+        print(
+            f"  -> added genie_space resource {resource_name!r} ({space_id}) "
+            f"to {DATABRICKS_YML} (under app '{app_key}')"
+        )
 
 
 def find_existing_space(w: WorkspaceClient, name: str):

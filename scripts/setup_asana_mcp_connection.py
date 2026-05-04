@@ -62,7 +62,12 @@ def _add_uc_connection_to_bundle(
     app_name: str,
     yaml_path: str = DEFAULT_BUNDLE_YAML,
 ) -> None:
-    """Add or replace the UC connection resource for this connection in ``databricks.yml``."""
+    """Replace all UC connection resources in ``databricks.yml`` with this one.
+
+    Strips every existing entry that has a ``uc_securable`` key and appends
+    a single fresh entry for ``connection_name`` — so reruns don't accumulate
+    stale connections from prior runs.
+    """
     from ruamel.yaml import YAML
     from ruamel.yaml.comments import CommentedMap
 
@@ -106,27 +111,35 @@ def _add_uc_connection_to_bundle(
     uc_sec["permission"] = "USE_CONNECTION"
     new_entry["uc_securable"] = uc_sec
 
-    # Replace any existing uc_securable entry with name matching connection_name
-    for i, r in enumerate(resources):
-        if not isinstance(r, dict):
-            continue
-        if r.get("name") == connection_name and "uc_securable" in r:
-            resources[i] = new_entry
-            with path.open("w") as f:
-                yaml.dump(data, f)
-            print(
-                f"  -> replaced UC connection resource '{connection_name}' in "
-                f"{yaml_path} (under app '{target_key}')"
-            )
-            return
+    removed = [
+        r.get("name", "<unnamed>")
+        for r in resources
+        if isinstance(r, dict) and "uc_securable" in r
+    ]
+    indices_to_drop = [
+        i
+        for i, r in enumerate(resources)
+        if isinstance(r, dict) and "uc_securable" in r
+    ]
+    for i in reversed(indices_to_drop):
+        del resources[i]
 
     resources.append(new_entry)
     with path.open("w") as f:
         yaml.dump(data, f)
-    print(
-        f"  -> added UC connection resource '{connection_name}' to "
-        f"{yaml_path} (under app '{target_key}')"
-    )
+
+    if removed:
+        print(
+            f"  -> replaced {len(removed)} existing uc_securable entr"
+            f"{'y' if len(removed) == 1 else 'ies'} "
+            f"({', '.join(removed)}) with '{connection_name}' in "
+            f"{yaml_path} (under app '{target_key}')"
+        )
+    else:
+        print(
+            f"  -> added UC connection resource '{connection_name}' to "
+            f"{yaml_path} (under app '{target_key}')"
+        )
 
 
 def _add_asana_mcp_server_to_agent(
