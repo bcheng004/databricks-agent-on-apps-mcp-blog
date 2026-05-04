@@ -38,7 +38,6 @@ from agent_server.utils_memory import (
 logger = logging.getLogger(__name__)
 mlflow.langchain.autolog()
 logging.getLogger("mlflow.utils.autologging_utils").setLevel(logging.ERROR)
-sp_workspace_client = WorkspaceClient()
 
 LLM_ENDPOINT_NAME = "databricks-claude-opus-4-7"
 LAKEBASE_CONFIG = init_lakebase_config()
@@ -63,7 +62,7 @@ async def init_agent(
 ):
     tools = [get_current_time] + memory_tools()
     # To use MCP server tools instead, uncomment the below lines:
-    mcp_client = init_mcp_client(workspace_client or sp_workspace_client)
+    mcp_client = init_mcp_client(workspace_client)
     try:
         tools.extend(await mcp_client.get_tools())
     except Exception:

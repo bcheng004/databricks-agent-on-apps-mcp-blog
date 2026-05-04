@@ -49,8 +49,13 @@ def init_mcp_client(workspace_client: WorkspaceClient) -> DatabricksMultiServerM
     return DatabricksMultiServerMCPClient(
         [
             DatabricksMCPServer(
+                name="genie",
+                url=f"{host_name}/api/2.0/mcp/genie/01f147b80bd21b929d76e4bbd180d94b",
+                workspace_client=workspace_client,
+            ),
+            DatabricksMCPServer(
                 name="asana",
-                url=f"{host_name}/api/2.0/mcp/external/asana_bohao",
+                url=f"{host_name}/api/2.0/mcp/external/agent_asana_mcp",
                 workspace_client=workspace_client,
             ),
         ]
@@ -58,15 +63,25 @@ def init_mcp_client(workspace_client: WorkspaceClient) -> DatabricksMultiServerM
 
 
 def get_user_workspace_client() -> WorkspaceClient:
+    # Local dev (not running on Databricks Apps): there is no x-forwarded
+    # access token from an end user, so fall back to the CLI profile from .env.
+    if not _is_databricks_app_env():
+        profile = os.getenv("DATABRICKS_CONFIG_PROFILE")
+        logging.info(
+            "Local dev mode — using Databricks CLI profile %r for user workspace client",
+            profile,
+        )
+        return WorkspaceClient(profile=profile) if profile else WorkspaceClient()
+
     token = get_request_headers().get("x-forwarded-access-token")
     logging.info("OBO token present: %s", bool(token))
-    # token = ""
     return WorkspaceClient(token=token, auth_type="pat")
 
 
 def get_databricks_host_from_env() -> Optional[str]:
     try:
-        w = WorkspaceClient()
+        # w = WorkspaceClient()
+        w = get_user_workspace_client()
         return w.config.host
     except Exception as e:
         logging.exception("Error getting databricks host from env: %s", e)
