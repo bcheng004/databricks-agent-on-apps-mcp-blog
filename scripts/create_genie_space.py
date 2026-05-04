@@ -21,6 +21,7 @@ from ruamel.yaml import YAML
 load_dotenv()
 
 DATABRICKS_YML = Path(__file__).resolve().parent.parent / "databricks.yml"
+UTILS_PY = Path(__file__).resolve().parent.parent / "agent_server" / "utils.py"
 
 
 def parse_args() -> argparse.Namespace:
@@ -120,6 +121,69 @@ def add_genie_space_to_app(space_id: str, title: str) -> None:
         )
 
 
+def update_genie_mcp_server_url(space_id: str) -> None:
+    """Point the ``name="genie"`` DatabricksMCPServer in ``utils.py`` at ``space_id``.
+
+    Mirrors the URL-rewrite pattern in
+    ``setup_asana_mcp_connection._add_asana_mcp_server_to_agent``: rewrites the
+    URL line in place if the entry exists, otherwise inserts a new server entry
+    before the closing ``]`` of ``init_mcp_client``. Skips cleanly when the
+    expected anchors aren't found so manual edits stay intact.
+    """
+    if not UTILS_PY.exists():
+        print(f"  (no {UTILS_PY} found; skipping agent update)")
+        return
+
+    text = UTILS_PY.read_text()
+    new_url = f'url=f"{{host_name}}/api/2.0/mcp/genie/{space_id}"'
+
+    if 'name="genie"' in text:
+        url_pattern = re.compile(
+            r'(name="genie",\s*\n\s*)url=f"\{host_name\}/api/2\.0/mcp/genie/[^"]*"'
+        )
+        new_text, count = url_pattern.subn(rf"\g<1>{new_url}", text, count=1)
+        if count == 0:
+            print(
+                f"  ('genie' MCP server present in {UTILS_PY} but URL line "
+                "didn't match expected shape; manual edit needed)"
+            )
+            return
+        if new_text == text:
+            print(
+                f"  ('genie' MCP server already points at '{space_id}' in {UTILS_PY})"
+            )
+            return
+        UTILS_PY.write_text(new_text)
+        print(
+            f"  -> updated 'genie' DatabricksMCPServer URL to "
+            f".../mcp/genie/{space_id} in {UTILS_PY}"
+        )
+        return
+
+    anchor = "            ),\n        ]"
+    if text.count(anchor) != 1:
+        print(
+            f"  (could not find unique insertion anchor in {UTILS_PY}; "
+            "manual edit needed)"
+        )
+        return
+
+    insertion = (
+        "            ),\n"
+        "            DatabricksMCPServer(\n"
+        '                name="genie",\n'
+        f"                {new_url},\n"
+        "                workspace_client=workspace_client,\n"
+        "            ),\n"
+        "        ]"
+    )
+    UTILS_PY.write_text(text.replace(anchor, insertion, 1))
+    print(
+        f"  -> added 'genie' DatabricksMCPServer "
+        f"(url .../mcp/genie/{space_id}) to {UTILS_PY}"
+    )
+
+
 def find_existing_space(w: WorkspaceClient, name: str):
     page_token = None
     while True:
@@ -170,6 +234,7 @@ def main() -> None:
         full = w.genie.get_space(match.space_id, include_serialized_space=True)
         print(f"Found Genie space {full.space_id}: {full.serialized_space}")
         add_genie_space_to_app(full.space_id, full.title or args.title)
+        update_genie_mcp_server_url(full.space_id)
         return
 
     warehouse_id = args.warehouse_id
@@ -261,6 +326,7 @@ def main() -> None:
     )
     print(f"Created Genie space: {space.serialized_space}")
     add_genie_space_to_app(space.space_id, args.title)
+    update_genie_mcp_server_url(space.space_id)
 
 
 if __name__ == "__main__":

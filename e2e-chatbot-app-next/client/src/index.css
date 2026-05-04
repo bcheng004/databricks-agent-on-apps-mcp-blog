@@ -129,67 +129,67 @@
   --font-standard-mono: Menlo, Monaco, Consolas, "Ubuntu Mono",
     "Source Code Pro", monospace, Menlo, Monaco, "Courier New", monospace;
 
-  /* Core surfaces — Asana light scheme with dark main canvas */
-  --background: #404244;
-  --foreground: #f1f1f2;
-  --card: #ffffff;
-  --card-foreground: #1e1f21;
-  --popover: #ffffff;
-  --popover-foreground: #1e1f21;
-  --tooltip: #1e1f21;
-  --tooltip-foreground: #ffffff;
+  /* Core surfaces — Asana dark mode in clearly grey tones */
+  --background: #2a2c2f;
+  --foreground: #e8e8e8;
+  --card: #36383b;
+  --card-foreground: #e8e8e8;
+  --popover: #36383b;
+  --popover-foreground: #e8e8e8;
+  --tooltip: #e8e8e8;
+  --tooltip-foreground: #2a2c2f;
 
   /* Primary action */
   --primary: var(--color-coral-500);
   --primary-foreground: #ffffff;
 
-  /* Secondary surface (matches sidebar bg for seamless inset) */
-  --secondary: #f6f7f8;
-  --secondary-foreground: #1e1f21;
+  /* Secondary surface (slightly elevated from canvas) */
+  --secondary: #303236;
+  --secondary-foreground: #e8e8e8;
 
   /* Muted */
-  --muted: #f6f7f8;
-  --muted-foreground: #6d6e6f;
+  --muted: #303236;
+  --muted-foreground: #8b8d91;
 
-  /* Accent */
-  --accent: #f4f4f6;
-  --accent-foreground: #1e1f21;
+  /* Accent (hover row highlight) */
+  --accent: #3d3f43;
+  --accent-foreground: #e8e8e8;
 
   /* Destructive / danger */
   --destructive: var(--color-red-600);
 
   /* Borders & inputs */
-  --border: #edeef0;
-  --input: #edeef0;
+  --border: #3d3f43;
+  --input: #3d3f43;
   --ring: var(--color-coral-500);
 
   /* Semantic additions */
   --warning: var(--color-yellow-600);
   --success: var(--color-green-600);
 
-  /* Alert / validation tinted borders and backgrounds */
-  --border-danger: #fbd0d8;
-  --border-warning: #f8d4a5;
-  --border-success: #a3d9b6;
-  --background-danger: #fff5f7;
-  --background-warning: #fff9eb;
-  --background-success: #f0faf4;
+  /* Alert / validation tinted borders and backgrounds (dark-mode safe) */
+  --border-danger: rgba(232, 58, 95, 0.3);
+  --border-warning: rgba(220, 98, 34, 0.3);
+  --border-success: rgba(60, 164, 94, 0.3);
+  --background-danger: rgba(232, 58, 95, 0.08);
+  --background-warning: rgba(220, 98, 34, 0.08);
+  --background-success: rgba(60, 164, 94, 0.08);
 
   /* Chart colors */
   --chart-1: var(--color-coral-500);
-  --chart-2: #277c43;
-  --chart-3: #be501e;
+  --chart-2: #3ca45e;
+  --chart-3: #dc6222;
   --chart-4: var(--color-purple-500);
   --chart-5: #9b6ae8;
 
-  /* Sidebar — Asana light rail */
-  --sidebar-background: #f6f7f8;
-  --sidebar-foreground: #1e1f21;
+  /* Sidebar — Asana dark rail (matches main canvas grey) */
+  --sidebar-background: #2a2c2f;
+  --sidebar-foreground: #e8e8e8;
   --sidebar-primary: var(--color-coral-500);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #ebecee;
-  --sidebar-accent-foreground: #1e1f21;
-  --sidebar-border: #e3e4e6;
+  --sidebar-accent: #36383b;
+  --sidebar-accent-foreground: #e8e8e8;
+  --sidebar-border: #3d3f43;
   --sidebar-ring: var(--color-coral-500);
 
   --radius: 0.25rem;
