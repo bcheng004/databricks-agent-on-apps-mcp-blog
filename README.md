@@ -6,6 +6,8 @@
   <img src="assets/asana-logo.svg" alt="Asana" height="36" />
 </p>
 
+https://github.com/user-attachments/assets/9c6b6342-5e52-4921-947b-ea2e8c85c06a
+
 Based on the [agent-langgraph-advanced app template](https://github.com/databricks/app-templates/tree/main/agent-langgraph-advanced).
 
 ## Local development
