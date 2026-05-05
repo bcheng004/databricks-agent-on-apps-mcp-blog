@@ -20,16 +20,17 @@ Based on the [agent-langgraph-advanced app template](https://github.com/databric
 
 ### 1. Bootstrap the environment
 
-`quickstart` writes a `.env`, configures auth, and points the agent at your Lakebase
-
-**Autoscaling Lakebase (project + branch):**
+`quickstart` writes a `.env`, configures auth, and points the agent at your Lakebase.
 
 ```bash
-uv run quickstart \
-  --profile <profile> \
-  --lakebase-autoscaling-project <project> \
-  --lakebase-autoscaling-branch <branch>
+uv run quickstart
 ```
+
+Arguments:
+
+- `--profile <profile>` — Databricks CLI profile to write into `.env`
+- `--lakebase-autoscaling-project <project>` — Lakebase autoscaling project name
+- `--lakebase-autoscaling-branch <branch>` — branch within the autoscaling project
 
 Verify the profile is valid afterwards:
 
@@ -41,13 +42,29 @@ databricks auth profiles
 
 ### 2. Wire up the MCP tools (optional)
 
-```bash
-# Asana MCP (UC HTTP connection + databricks.yml + utils.py wiring)
-uv run setup-asana-mcp --profile <profile> --app-name <app> --connection-name <name>
+Asana MCP (UC HTTP connection + `databricks.yml` + `utils.py` wiring):
 
-# Genie space (creates or reuses, then rewrites databricks.yml + utils.py URL)
-uv run create-genie-space --profile <profile> --title "<space title>"
+```bash
+uv run setup-asana-mcp
 ```
+
+Arguments:
+
+- `--profile <profile>` — Databricks CLI profile
+- `--app-name <app>` — Databricks app that gets `USE_CONNECTION` on the new UC connection
+- `--connection-name <name>` — UC HTTP connection name to create (e.g. `mcp_agent_asana`)
+
+Genie space (creates or reuses, then rewrites `databricks.yml` + `utils.py` URL):
+
+```bash
+uv run create-genie-space
+```
+
+Arguments:
+
+- `--profile <profile>` — Databricks CLI profile
+- `--title "<space title>"` — Genie space title to create or reuse
+- `--warehouse-id <id>` *(optional)* — SQL warehouse ID; falls back to the workspace default
 
 > After `uv run setup-asana-mcp` finishes, complete the OAuth handshake in the Databricks UI: open the new UC connection in **Catalog Explorer → External Data → Connections**, click **Login**, and approve the scopes in the Asana popup (if needed). Until that login is done the connection has credentials but no user token, so MCP tool calls will fail with 401s.
 
@@ -69,14 +86,37 @@ uv run discover-tools
 
 ### 4. Deploy to Databricks Apps
 
+Deploy the bundle:
+
 ```bash
-databricks bundle deploy --profile <profile>
-
-# Grant the app's SP the Lakebase grants it needs for memory tables
-uv run grant-lakebase-permissions --profile <profile> --app-name <app> --memory-type langgraph
-
-databricks bundle run agent_langgraph_advanced_mcp --profile <profile>
+databricks bundle deploy
 ```
 
-> `grant-lakebase-permissions` has to run *after* the bundle deploy because the app's service principal client ID only exists once the app is created.
+Arguments:
 
+- `--profile <profile>` — Databricks CLI profile
+
+Grant the app's SP the Lakebase grants it needs for memory tables:
+
+```bash
+uv run grant-lakebase-permissions
+```
+
+Arguments:
+
+- `--profile <profile>` — Databricks CLI profile
+- `--app-name <app>` — the app whose service principal gets the grants
+- `--memory-type langgraph` — schema set to grant against (matches this template)
+
+Run the bundle:
+
+```bash
+databricks bundle run
+```
+
+Arguments:
+
+- `agent_langgraph_advanced_mcp` *(positional)* — bundle resource name to run
+- `--profile <profile>` — Databricks CLI profile
+
+> `grant-lakebase-permissions` has to run *after* the bundle deploy because the app's service principal client ID only exists once the app is created.
