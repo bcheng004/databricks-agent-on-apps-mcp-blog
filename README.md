@@ -10,6 +10,16 @@ https://github.com/user-attachments/assets/9c6b6342-5e52-4921-947b-ea2e8c85c06a
 
 Based on the [agent-langgraph-advanced app template](https://github.com/databricks/app-templates/tree/main/agent-langgraph-advanced).
 
+## Asana OAuth app setup
+
+Before running `setup-asana-mcp`, create an OAuth application in the [Asana developer console](https://app.asana.com/0/my-apps) and set the **redirect URL** to:
+
+```
+<workspaceurl>/login/oauth/http.html
+```
+
+Replace `<workspaceurl>` with your Databricks workspace host (e.g. `https://example.cloud.databricks.com`). Save the resulting `client_id` and `client_secret` — `setup-asana-mcp` will prompt for them when wiring up the UC HTTP connection.
+
 ## Local development
 
 ### Prerequisites
