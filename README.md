@@ -54,6 +54,8 @@ Arguments:
 - `--app-name <app>` — Databricks app that gets `USE_CONNECTION` on the new UC connection
 - `--connection-name <name>` — UC HTTP connection name to create (e.g. `mcp_agent_asana`)
 
+**Make sure to Login to the Asana MCP Connection to auth the OAuth user to machine per user**
+
 Genie space (creates or reuses, then rewrites `databricks.yml` + `utils.py` URL):
 
 ```bash
