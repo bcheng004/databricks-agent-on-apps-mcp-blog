@@ -217,3 +217,5 @@ load-test-runs/
 
 # local chatbot app (not part of template)
 # e2e-chatbot-app-next/
+.mcp.json
+.ai-dev-kit
