@@ -68,7 +68,7 @@ async def init_agent(
     except Exception:
         logger.warning("Failed to fetch MCP tools. Continuing without MCP tools.", exc_info=True)
 
-    model = ChatDatabricks(endpoint=LLM_ENDPOINT_NAME)
+    model = ChatDatabricks(endpoint=LLM_ENDPOINT_NAME, use_ai_gateway=True)
 
     return create_agent(
         model=model,
